@@ -482,22 +482,37 @@ function statusBadgeClass(s){
   return {Drafting:'gold',Revising:'blue',Editing:'purple',Complete:'green',Paused:'grey'}[s]||'';
 }
 
+function dateKeyLocal(date){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
 function calculateStreak(){
-  const goal = state.settings.dailyGoal||1;
+  const goal = Number(state.settings.dailyGoal) || 1;
   const byDay = {};
+
   allSessions().forEach(s=>{
-    if(Number(s.wordCount)>0) byDay[s.date]=(byDay[s.date]||0)+Number(s.wordCount);
+    const words = Number(s.wordCount) || 0;
+    if(words > 0 && s.date){
+      byDay[s.date] = (byDay[s.date] || 0) + words;
+    }
   });
-  let streak=0;
+
+  let streak = 0;
   let d = new Date();
-  // if today not logged, start from yesterday
-  const t = todayStr();
-  if(!(byDay[t] && byDay[t]>=goal)) d.setDate(d.getDate()-1);
-  while(true){
-    const k = d.toISOString().slice(0,10);
-    if(byDay[k] && byDay[k]>=goal){ streak++; d.setDate(d.getDate()-1); }
-    else break;
+  let k = dateKeyLocal(d);
+
+  // If today's goal has not been met, count the streak ending yesterday.
+  if(!(byDay[k] >= goal)){
+    d.setDate(d.getDate()-1);
+    k = dateKeyLocal(d);
   }
+
+  while(byDay[k] >= goal){
+    streak++;
+    d.setDate(d.getDate()-1);
+    k = dateKeyLocal(d);
+  }
+
   return streak;
 }
 
